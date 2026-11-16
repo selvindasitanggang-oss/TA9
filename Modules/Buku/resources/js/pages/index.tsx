@@ -1,0 +1,15 @@
+import AppLayout from '@/layouts/app-layout';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+
+type Book={id:number;judul:string;penulis:string;penerbit:string;tahun_terbit:number;stok:number};
+export default function Buku({books,filters,flash}:{books:{data:Book[];links:{url:string|null;label:string;active:boolean}[]};filters:{search?:string};flash?:{success?:string}}){
+ const role=usePage<any>().props.role;
+ const [editing,setEditing]=useState<Book|null>(null); const form=useForm({judul:'',penulis:'',penerbit:'',tahun_terbit:'',stok:''});
+ const begin=(b?:Book)=>{setEditing(b??null);form.setData(b?{judul:b.judul,penulis:b.penulis,penerbit:b.penerbit,tahun_terbit:String(b.tahun_terbit),stok:String(b.stok)}:{judul:'',penulis:'',penerbit:'',tahun_terbit:'',stok:''});};
+ const submit=(e:React.FormEvent)=>{e.preventDefault();editing?form.put(`/buku/${editing.id}`,{onSuccess:()=>begin()}):form.post('/buku',{onSuccess:()=>begin()});};
+ return <AppLayout><Head title="Katalog Buku"/><main className="space-y-5 p-6"><h1 className="text-2xl font-semibold">Katalog Buku</h1>{flash?.success&&<p className="rounded bg-green-100 p-3">{flash.success}</p>}<form onSubmit={e=>{e.preventDefault();router.get('/buku',{search:(e.currentTarget.elements.namedItem('search') as HTMLInputElement).value},{preserveState:true});}}><input name="search" defaultValue={filters.search} placeholder="Cari judul atau penulis" className="rounded border p-2"/><button className="ml-2 rounded bg-black px-4 py-2 text-white">Cari</button></form>
+ {form.errors && <p className="text-red-600">{Object.values(form.errors)[0]}</p>}
+ {role==='admin' && <form onSubmit={submit} className="grid gap-2 rounded border p-4 sm:grid-cols-5">{(['judul','penulis','penerbit','tahun_terbit','stok'] as const).map(k=><label key={k} className="text-sm">{k.replace('_',' ')}<input required name={k} value={form.data[k]} onChange={e=>form.setData(k,e.target.value)} className="block w-full rounded border p-2"/><span className="text-red-600">{form.errors[k]}</span></label>)}<button className="rounded bg-blue-700 p-2 text-white">{editing?'Simpan':'Tambah Buku'}</button>{editing&&<button type="button" onClick={()=>begin()} className="p-2">Batal</button>}</form>}
+ <div className="overflow-x-auto"><table className="w-full border-collapse text-left"><thead><tr>{['Judul','Penulis','Penerbit','Tahun','Stok','Aksi'].map(x=><th className="border p-2" key={x}>{x}</th>)}</tr></thead><tbody>{books.data.map(b=><tr key={b.id}>{[b.judul,b.penulis,b.penerbit,b.tahun_terbit,b.stok].map((v,i)=><td className="border p-2" key={i}>{v}</td>)}<td className="space-x-2 border p-2">{role==='admin'&&<><button onClick={()=>begin(b)}>Edit</button><button className="text-red-600" onClick={()=>confirm('Hapus buku ini?')&&router.delete(`/buku/${b.id}`)}>Hapus</button></>}</td></tr>)}</tbody></table></div><nav className="flex gap-3">{books.links.map((l,i)=><button key={i} disabled={!l.url} className={l.active?'font-bold':''} onClick={()=>l.url&&router.get(l.url)} dangerouslySetInnerHTML={{__html:l.label}}/>)}</nav></main></AppLayout>
+}
